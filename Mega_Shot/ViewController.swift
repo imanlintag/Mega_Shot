@@ -31,21 +31,59 @@ class ViewController: UIViewController {
     var elasticity: UIDynamicItemBehavior!
     var push: UIPushBehavior!
     
+    var lastBasketballY: CGFloat!
+    var isCollide = false
+    var gameEnded = false
+    var isShoot = false
+    var isInsideBasket = false;
+    
+    var touchPointBegin: CGPoint!
+    var touchPointEnd: CGPoint!
+    
+    var actualScore: Int = 0
+    var bestScore: Int = 0
+    
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        let defaults = UserDefaults.standard
+        bestScore = defaults.integer(forKey: "basketBestScore")
+        updateScore()
+        updateHighScore()
+        spawnBall()
     }
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        if touches.first != nil {
+        if let touch = touches.first {
+            let location = touch.location(in: view)
+            touchPointBegin = location
         }
-        
+        super.touchesBegan(touches, with: event)
     }
     
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         if let touch = touches.first {
-            _ = touch.location(in: view)
+            let location = touch.location(in: view)
+            touchPointEnd = location
         }
-
+        super.touchesEnded(touches, with: event)
+        shoot()
+    }
+    
+    func animateLabel() {
+        if actualScore != 1 {
+            
+            UIView.animate(withDuration: 0.2, animations: {
+                self.scoreLabel.transform = self.scoreLabel.transform.scaledBy(x: 0.2, y: 0.2)
+            }, completion: { (Bool) in
+                self.scoreLabel.text = "\(self.actualScore)"
+                UIView.animate(withDuration: 0.2, animations: {
+                    self.scoreLabel.transform = self.scoreLabel.transform.scaledBy(x: 5, y: 5)
+                })
+            })
+        }
+        else {
+            self.scoreLabel.text = "\(self.actualScore)"
+        }
     }
     
     func createDynamicProperties() {
@@ -102,6 +140,59 @@ class ViewController: UIViewController {
         view.addSubview(progBasketball)
         
         createDynamicProperties()
+        resetGameProperties()
+    }
+
+    func resetGameProperties() {
+        isCollide = false
+        gameEnded = false
+        isShoot = false
+        isInsideBasket = false
+        lastBasketballY = 0
+    }
+    
+    func endGame() {
+        UIView.animate(withDuration: 0.3, animations: {
+            self.progBasketball.alpha = 0
+        }, completion: {
+            (value: Bool) in
+            self.spawnBall()
+        })
+    }
+    
+    func shoot() {
+        if !isShoot {
+            animator.addBehavior(collision)
+            animator.addBehavior(elasticity)
+            animator.addBehavior(gravity)
+            isShoot = true
+        }
+    }
+    
+    func updateScore() {
+        if self.isInsideBasket {
+            actualScore = actualScore + 1
+        } else {
+            updateHighScore()
+            actualScore = 0
+        }
+        animateLabel()
+        if actualScore == 0 {
+            self.scoreLabel.isHidden = true
+        } else {
+            self.scoreLabel.isHidden = false
+        }
+    }
+    
+    func updateHighScore() {
+        if bestScore < actualScore {
+            bestScore = actualScore
+            
+            let defaults = UserDefaults.standard
+            defaults.set(bestScore, forKey: "basketBestScore")
+            print("save best score")
+        }
+        self.bestScoreLabel.text = "High Score : \(bestScore)"
     }
 
 }
