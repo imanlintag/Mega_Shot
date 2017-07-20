@@ -43,6 +43,11 @@ class ViewController: UIViewController {
     var actualScore: Int = 0
     var bestScore: Int = 0
     
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.emoteLabel.isHidden = true;
+    }
+    
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         let defaults = UserDefaults.standard
@@ -163,6 +168,7 @@ class ViewController: UIViewController {
     func shoot() {
         if !isShoot {
             animator.addBehavior(collision)
+            animator.addBehavior(pushForPosition(CGPoint.zero))
             animator.addBehavior(elasticity)
             animator.addBehavior(gravity)
             isShoot = true
@@ -194,5 +200,69 @@ class ViewController: UIViewController {
         }
         self.bestScoreLabel.text = "High Score : \(bestScore)"
     }
+    
+    func displayEmote() {
+        self.emoteLabel.isHidden = false
+        self.emoteLabel.text = "👌"
+        UIView.animate(withDuration: 1, animations: {
+            self.emoteLabel.frame.origin.y = self.emoteLabel.frame.origin.y - 20
+        }, completion: { (Bool) in
+            self.emoteLabel.isHidden = true
+        })
+    }
 
+    func pushForPosition(_ position: CGPoint) -> UIPushBehavior {
+        push = UIPushBehavior(items: [progBasketball], mode: .instantaneous)
+        push.action = {
+            
+            if self.lastBasketballY == 0 {
+                self.lastBasketballY = self.progBasketball.frame.origin.y + 1
+            }
+            if self.lastBasketballY <= self.progBasketball.frame.origin.y {
+                if !self.isCollide {
+                    self.animator.addBehavior(self.basketCollision)
+                    self.spawnPanierLine()
+                    self.isCollide = true
+                    
+                }
+            }
+            if self.progBasketball.frame.origin.y > 250 {
+                if self.isCollide {
+                    if !self.gameEnded {
+                        self.gameEnded = true
+                        self.updateScore()
+                        self.endGame()
+                    }
+                }
+            }
+            if self.isCollide  && !self.isInsideBasket {
+                if self.progBasketball.center.x > 169 && self.progBasketball.center.x < 196 {
+                    if self.progBasketball.center.y > 270 && self.progBasketball.center.y < 280 {
+                        self.isInsideBasket = true
+                        self.displayEmote()
+                    }
+                }
+                
+            }
+            self.lastBasketballY = self.progBasketball.frame.origin.y
+        }
+        
+        var f = atan2(self.touchPointEnd.y - self.touchPointBegin.y, self.touchPointEnd.x - self.touchPointBegin.x)
+        
+        if f > -1.40 {
+            f = -1.40
+        } else if f < -1.70 {
+            f = -1.75
+        }
+        
+        push.angle = f
+        push.magnitude = 5.50
+        return push
+    }
+    
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+        // Dispose of any resources that can be recreated.
+    }
+    
 }
